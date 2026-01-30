@@ -1,3 +1,12 @@
+# =============================================================================
+# Copyright (c) 2026 Jack LaVergne
+#
+# This file is licensed under the MIT License.
+# See the LICENSE file in the project root for full license information.
+# =============================================================================
+
+
+
 import core.audio_buffer as ab
 import core.framing as fr
 import core.pitch_frame as pf
