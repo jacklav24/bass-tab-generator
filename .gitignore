@@ -13,4 +13,5 @@ temp/
 autocorrelation_test.py
 *.mp3
 *.wav
-*.DS_Store
+**/.DS_Store
+
