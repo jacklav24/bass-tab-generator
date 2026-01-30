@@ -4,8 +4,15 @@
 
 **My main goal of this project is to first build some infrastructure, for music/audio analysis, which I will then throw ML and other stuff on top of. To start, we are building the framing and pitch identification.
 
-Currently, main.py runs some tests/checks of the stuff I've built so far**
+Currently, main.py runs some tests/checks of the stuff I've built so far. The stuff I've built is in _core/_**
 
+### Needed info:
+source .venv/bin/activate
+
+deactivate
+
+### Pip installs
+`pip intsall -r requirements.txt`
 
 ## This is Stage 0 Of the Project
 
