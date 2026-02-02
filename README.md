@@ -3,9 +3,9 @@
 
 # Python Time
 
-**My main goal of this project is to first build some infrastructure, for music/audio analysis, which I will then throw ML and other stuff on top of. To start, we are building the framing and pitch identification.
+**My main goal of this project is to first build some infrastructure, for music/audio analysis, which I will then throw ML and other stuff on top of. To start, we are building the framing and pitch identification.**
 
-Currently, main.py runs some tests/checks of the stuff I've built so far. Once I get a little more fleshed out, I'll write a .md file that explains how to run everything.**
+**Currently, main.py runs some tests/checks of the stuff I've built so far. Once I get a little more fleshed out, I'll write a .md file that explains how to run everything.**
 
 #### I've had chatGPT write most of the docstrings for functions and classes after the fact. None of the other code, unless explicitly referenced, is AI generated.
 
