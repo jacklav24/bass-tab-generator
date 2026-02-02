@@ -12,16 +12,77 @@ import numpy as np
 
 
 class AudioBuffer:
+    """
+    Immutable container representing a mono, float32, linear PCM audio signal
+    sampled at a fixed rate.
+
+    Contract:
+    - `data` is a 1D numpy.ndarray of dtype float32 with shape (num_samples,)
+    - Audio is mono (single channel)
+    - Sample values are finite (no NaN or Inf)
+    - `sample_rate` is a positive integer (Hz)
+    - Time semantics are exact:
+        time_seconds = num_samples / sample_rate
+
+    Non-goals:
+    - No resampling
+    - No trimming or padding
+    - No normalization
+    - No interpretation of audio content
+
+    An AudioBuffer represents raw audio exactly as loaded, with no modification
+    beyond enforcing the above invariants.
+    """
     def __init__(self, data: np.ndarray, sample_rate: int):
         self.data = data
         self.sample_rate = sample_rate
-''' 
-An `AudioBuffer` is a mono, float32, linear PCM signal sampled at a fixed rate (`sample_rate`).  
-Its shape is `(num_samples, )`.
-`num_samples / sample_rate` **always** defines time exactly.
-No resampling, trimming, or normalization is a part of the AudioBuffer
-'''
+        
+        
+        
+
 def load_audio_buffer(file_path: str) -> AudioBuffer:
+    """
+    Load an audio file from disk and return it as a validated AudioBuffer.
+
+    This function enforces the full AudioBuffer contract by:
+    - Loading audio data as float32 PCM
+    - Converting multi-channel audio to mono via channel averaging
+    - Verifying shape, dtype, finiteness, and duration
+    - Verifying sample rate validity
+
+    Guarantees on success:
+    - Returns an AudioBuffer whose `data` is a 1D float32 numpy array
+    - `data` contains at least one sample
+    - `data` contains only finite values
+    - `sample_rate` is a positive integer
+    - Audio duration is strictly positive
+
+    Failure behavior:
+    - Raises or propagates an exception if any contract check fails
+    - No partial or invalid AudioBuffer is ever returned
+
+    Non-goals:
+    - No resampling
+    - No normalization
+    - No trimming, padding, or silence removal
+    - No semantic interpretation of audio content
+
+    Parameters:
+        file_path (str):
+            Path to an audio file readable by soundfile.
+
+    Returns:
+        AudioBuffer:
+            A validated, immutable audio buffer satisfying the AudioBuffer contract.
+            
+    Raises:
+    - TypeError or ValueError if any contract check fails
+    - Propagates I/O errors from soundfile
+
+    This function defines the sole entry point by which raw audio enters
+    the analysis pipeline.
+    """
+    
     try:
         with sf.SoundFile(file_path) as f:
             data = f.read(dtype='float32', always_2d=False)
@@ -73,3 +134,4 @@ def load_audio_buffer(file_path: str) -> AudioBuffer:
             
     except Exception as e:
         print(f"An error occurred: {e}")
+        

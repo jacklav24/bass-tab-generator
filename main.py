@@ -10,6 +10,7 @@
 import core.audio_buffer as ab
 import core.framing as fr
 import analysis.pitch_frame as pf
+import analysis.smoothing as sm
 
 def inspect_frames_around_time(frames, pitch_frames, target_time, window=0.25):
     print(f"\nInspecting frames around {target_time:.2f}s (±{window:.2f}s):\n")
@@ -129,10 +130,124 @@ def dummy_pitch_frame_function(pitch_frames, frames):
     plt.ylim(0, 600)
     plt.show()
 
+def plot_raw_vs_smoothed_pitch_window(
+    frames,
+    raw_pitch_frames,
+    smoothed_pitch_frames,
+    t_start,
+    t_end,
+):
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    times = []
+    raw_f0s = []
+    smooth_f0s = []
+    confidences = []
+
+    for f, p_raw, p_smooth in zip(frames, raw_pitch_frames, smoothed_pitch_frames):
+        if t_start <= f.time_seconds <= t_end:
+            times.append(f.time_seconds)
+            raw_f0s.append(p_raw.f0_hz if p_raw.f0_hz is not None else np.nan)
+            smooth_f0s.append(p_smooth.f0_hz if p_smooth.f0_hz is not None else np.nan)
+            confidences.append(p_raw.confidence)
+
+    plt.figure(figsize=(10, 5))
+
+    plt.subplot(2, 1, 1)
+    plt.plot(times, raw_f0s, ".", markersize=3, label="Raw f0", alpha=0.6)
+    plt.plot(times, smooth_f0s, "-", linewidth=1.5, label="Smoothed f0")
+    plt.ylabel("f0 (Hz)")
+    plt.title(f"Raw vs Smoothed Pitch ({t_start:.2f}s–{t_end:.2f}s)")
+    plt.legend()
+    plt.ylim(0, 300)
+
+    plt.subplot(2, 1, 2)
+    plt.plot(times, confidences)
+    plt.ylabel("Confidence")
+    plt.xlabel("Time (s)")
+    plt.ylim(0, 1.05)
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_smoothing_delta_window(
+    frames,
+    raw_pitch_frames,
+    smoothed_pitch_frames,
+    t_start,
+    t_end,
+):
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    times = []
+    deltas = []
+
+    for f, p_raw, p_smooth in zip(frames, raw_pitch_frames, smoothed_pitch_frames):
+        if t_start <= f.time_seconds <= t_end:
+            if p_raw.f0_hz is not None and p_smooth.f0_hz is not None:
+                times.append(f.time_seconds)
+                deltas.append(p_smooth.f0_hz - p_raw.f0_hz)
+
+    plt.figure(figsize=(10, 3))
+    plt.plot(times, deltas, ".", markersize=3)
+    plt.axhline(0, color="gray", linewidth=1)
+    plt.ylabel("Δ f0 (Hz)")
+    plt.xlabel("Time (s)")
+    plt.title(f"Smoothing Adjustment ({t_start:.2f}s–{t_end:.2f}s)")
+    plt.tight_layout()
+    plt.show()
+
+def summarize_smoothing_adjustments(raw_pitch_frames, smoothed_pitch_frames):
+    """
+    Summarize the magnitude and frequency of pitch smoothing adjustments.
+
+    Reports how many frames were modified by smoothing and basic statistics
+    of the f0 differences (smoothed - raw), considering only frames where
+    both raw and smoothed f0 values are present.
+    """
+    import numpy as np
+
+    deltas = []
+
+    for raw, smooth in zip(raw_pitch_frames, smoothed_pitch_frames):
+        if raw.f0_hz is not None and smooth.f0_hz is not None:
+            delta = smooth.f0_hz - raw.f0_hz
+            if delta != 0.0:
+                deltas.append(delta)
+
+    if not deltas:
+        print("Smoothing made no numerical adjustments.")
+        return
+
+    deltas = np.array(deltas)
+
+    print("Smoothing adjustment summary:")
+    print(f"  Frames adjusted        : {len(deltas)}")
+    print(f"  Mean |Δf0| (Hz)         : {np.mean(np.abs(deltas)):.4f}")
+    print(f"  Median |Δf0| (Hz)       : {np.median(np.abs(deltas)):.4f}")
+    print(f"  Max |Δf0| (Hz)          : {np.max(np.abs(deltas)):.4f}")
+    print(f"  Std of Δf0 (Hz)         : {np.std(deltas):.4f}")
+
+
+def assert_no_pitch_invention(raw_pitch_frames, smoothed_pitch_frames):
+    """
+    Assert that temporal smoothing does not invent pitch values.
+
+    Raises AssertionError if any frame has f0_hz=None before smoothing
+    and a non-None f0_hz after smoothing.
+    """
+    for i, (raw, smooth) in enumerate(zip(raw_pitch_frames, smoothed_pitch_frames)):
+        if raw.f0_hz is None and smooth.f0_hz is not None:
+            raise AssertionError(
+                f"Smoothing invented pitch at frame {i}: {smooth.f0_hz}"
+            )
 
 
 def main():
-    audio = ab.load_audio_buffer("./bass_files/bass1.wav")
+    FILE_PATHS = ["bass1.wav", "something.wav" ]
+    audio = ab.load_audio_buffer(f"./bass_files/{FILE_PATHS[0]}")
     num_samples = len(audio.data)
     duration_seconds = num_samples / audio.sample_rate
     print(f"Loaded audio buffer with {len(audio.data)} samples at {audio.sample_rate} Hz for {duration_seconds:.2f} seconds")
@@ -144,23 +259,32 @@ def main():
     print(f"Built {len(frames)} frames of size {frame_size_samples} samples with hop size {hop_size_samples}")
     
     pitch_frames = list(
-    pf.estimate_pitch_sequence(
-        frames,
-        audio.sample_rate,
-        method="autocorr",
-        f_min=30.0,
-        f_max=500.0,
+        pf.estimate_pitch_sequence(
+            frames,
+            audio.sample_rate,
+            method="autocorr",
+            f_min=30.0,
+            f_max=500.0,
+        )
     )
-)
 
+    
     print(f"Built {len(pitch_frames)} PitchFrames")
     
+    confidence_min = 0.6
+    window_size = 5
+    
+    smoothed_pitch_frames = sm.smooth_pitch_frames(pitch_frames, confidence_min=confidence_min, window_size=window_size)
+    print(f"Built {len(smoothed_pitch_frames)} smoothed PitchFrames with confidence_min of {confidence_min} and window size of {window_size}")
+    
     # dummy_frame_function(audio, frames, frame_size_samples, duration_seconds)
-    dummy_pitch_frame_function(pitch_frames, frames)
-    plot_pitch_window(frames, pitch_frames, t_start=2.0, t_end=4.0)
-    inspect_frames_around_time(frames, pitch_frames, target_time=2.5, window=0.3)
+    # dummy_pitch_frame_function(pitch_frames, frames)
+    # plot_pitch_window(frames, pitch_frames, t_start=2.0, t_end=4.0)
+    # inspect_frames_around_time(frames, pitch_frames, target_time=2.5, window=0.3)
+    
+    assert_no_pitch_invention(pitch_frames, smoothed_pitch_frames)
 
-
+    summarize_smoothing_adjustments(pitch_frames, smoothed_pitch_frames)
 
 if __name__ == "__main__":
     main()

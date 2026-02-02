@@ -1,18 +1,25 @@
 ﻿
 
+
 # Python Time
 
-**My main goal of this project is to first build some infrastructure, for music/audio analysis, which I will then throw ML and other stuff on top of. To start, we are building the framing and pitch identification.**
+**My main goal of this project is to first build some infrastructure, for music/audio analysis, which I will then throw ML and other stuff on top of. To start, we are building the framing and pitch identification.
 
-**Currently, main.py runs some tests/checks of the stuff I've built so far. The stuff I've built is in _core/_**
+Currently, main.py runs some tests/checks of the stuff I've built so far. Once I get a little more fleshed out, I'll write a .md file that explains how to run everything.**
+
+#### I've had chatGPT write most of the docstrings for functions and classes after the fact. None of the other code, unless explicitly referenced, is AI generated.
 
 ### Needed info:
+
+/opt/homebrew/bin/python3 -m venv .venv
+
+#### You can replace OPT/HOMEBREW/BIN/PYTHON3 with your preferred/installed python.
+
 source .venv/bin/activate
 
-deactivate
+#### TO close....
 
-### Pip installs
-`pip install -r requirements.txt`
+deactivate
 
 ## This is Stage 0 Of the Project
 
@@ -22,7 +29,7 @@ We'll load the audio from the disk, convert to a standardized internal represent
 I've settled on **soundfile** as my audio loader. It's a wrapper around **libsndfile**.  
 This is best, since it has a good api and is wisely used. It'll require MP3 fallbacks, potentially.
 
-`pip install soundfile`
+`pip install soundfile` (if you didn't run pip install soundfile)
 
 The __read__ function has a couple of good parameters to use. We'll use `file, dtype, always_2d` to ensure that the file path is specified, datatype is specified, and that the audio isn't forced to stereo at all times.
 
