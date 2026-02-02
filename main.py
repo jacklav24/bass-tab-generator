@@ -9,7 +9,7 @@
 
 import core.audio_buffer as ab
 import core.framing as fr
-import core.pitch_frame as pf
+import analysis.pitch_frame as pf
 
 def inspect_frames_around_time(frames, pitch_frames, target_time, window=0.25):
     print(f"\nInspecting frames around {target_time:.2f}s (±{window:.2f}s):\n")

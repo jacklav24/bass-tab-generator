@@ -12,7 +12,7 @@ source .venv/bin/activate
 deactivate
 
 ### Pip installs
-`pip intsall -r requirements.txt`
+`pip install -r requirements.txt`
 
 ## This is Stage 0 Of the Project
 
