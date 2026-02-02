@@ -11,15 +11,16 @@
 
 ### Needed info:
 
-/opt/homebrew/bin/python3 -m venv .venv
+In terminal type:
+`/opt/homebrew/bin/python3 -m venv .venv`
 
 #### You can replace OPT/HOMEBREW/BIN/PYTHON3 with your preferred/installed python.
 
-source .venv/bin/activate
+Then:
+`source .venv/bin/activate`
 
 #### TO close....
-
-deactivate
+`deactivate`
 
 ## This is Stage 0 Of the Project
 
