@@ -6,11 +6,24 @@
 # =============================================================================
 
 
+"""
+main.py
+
+This file is an exploratory and diagnostic entry point used to:
+- validate core invariants
+- exercise pitch estimation and refinement
+- run diagnostic summaries
+- visualize behavior during development
+
+It is not intended as a production API or CLI.
+"""
 
 import core.audio_buffer as ab
 import core.framing as fr
 import analysis.pitch_frame as pf
 import analysis.smoothing as sm
+
+from analysis.diagnostics import summarize_pitch_track
 
 def inspect_frames_around_time(frames, pitch_frames, target_time, window=0.25):
     print(f"\nInspecting frames around {target_time:.2f}s (±{window:.2f}s):\n")
@@ -55,7 +68,7 @@ def plot_pitch_window(frames, pitch_frames, t_start, t_end):
     plt.show()
 
 
-def dummy_frame_function(audio, frames, frame_size_samples, duration_seconds):
+def debug_frame_function(audio, frames, frame_size_samples, duration_seconds):
     
     for f in frames[:5]:
         print(
@@ -88,7 +101,7 @@ def dummy_frame_function(audio, frames, frame_size_samples, duration_seconds):
     plt.show()
     
 
-def dummy_pitch_frame_function(pitch_frames, frames):
+def debug_pitch_frame_function(pitch_frames, frames):
     
     # Check 1: alignment
     assert len(pitch_frames) == len(frames), "PitchFrames and Frames length mismatch"
@@ -244,10 +257,29 @@ def assert_no_pitch_invention(raw_pitch_frames, smoothed_pitch_frames):
                 f"Smoothing invented pitch at frame {i}: {smooth.f0_hz}"
             )
 
+def run_diagnostics(pitch_frames: list[pf.PitchFrame]):
+    diagnostics = summarize_pitch_track(pitch_frames)
+    print("Voicing:")
+    print(f"  Voiced ratio        : {diagnostics.voicing.voiced_ratio:.3f}")
+    print(f"  Failure clustering  : {diagnostics.voicing.failure_clustering:.3f}")
 
+    print("Stability:")
+    print(f"  Median |Δf0| (Hz)   : {diagnostics.stability.median_abs_delta_hz:.3f}")
+    print(f"  Continuity ratio    : {diagnostics.stability.continuity_ratio:.3f}")
+
+    print("Confidence:")
+    print(f"  Mean conf (voiced)        : {diagnostics.confidence.mean_conf_voiced:.3f}")
+    print(f"  Mean conf (unvoiced)      : {diagnostics.confidence.mean_conf_unvoiced:.3f}")
+    print(f"  Conf–Δf0 corr             : {diagnostics.confidence.conf_stability_corr:.3f}")
+    print(f"  Conf autocorr (lag 1)     : {diagnostics.confidence.conf_autocorr_lag1:.3f}")
+    print(f"  High-conf median |Δf0| Hz : {diagnostics.confidence.high_conf_median_abs_delta_hz:.3f}")
+    print(f"  Conf–Δf0 monotonicity     : {diagnostics.confidence.conf_delta_monotonicity:.3f}")
+    
 def main():
-    FILE_PATHS = ["bass1.wav", "something.wav" ]
-    audio = ab.load_audio_buffer(f"./bass_files/{FILE_PATHS[0]}")
+    # Example audio inputs used for local diagnostics
+    FILE_PATHS = ["bass1.wav", "something.wav"]
+    
+    audio = ab.load_audio_buffer(f"./bass_files/{FILE_PATHS[1]}")
     num_samples = len(audio.data)
     duration_seconds = num_samples / audio.sample_rate
     print(f"Loaded audio buffer with {len(audio.data)} samples at {audio.sample_rate} Hz for {duration_seconds:.2f} seconds")
@@ -277,14 +309,19 @@ def main():
     smoothed_pitch_frames = sm.smooth_pitch_frames(pitch_frames, confidence_min=confidence_min, window_size=window_size)
     print(f"Built {len(smoothed_pitch_frames)} smoothed PitchFrames with confidence_min of {confidence_min} and window size of {window_size}")
     
-    # dummy_frame_function(audio, frames, frame_size_samples, duration_seconds)
-    # dummy_pitch_frame_function(pitch_frames, frames)
-    # plot_pitch_window(frames, pitch_frames, t_start=2.0, t_end=4.0)
+    #debug_frame_function(audio, frames, frame_size_samples, duration_seconds)
+    # debug_pitch_frame_function(pitch_frames, frames)
+    # plot_pitch_window(frames, pitch_frames, t_start=35.0, t_end=40.0)
     # inspect_frames_around_time(frames, pitch_frames, target_time=2.5, window=0.3)
+    # assert_no_pitch_invention(pitch_frames, smoothed_pitch_frames)
+    # summarize_smoothing_adjustments(pitch_frames, smoothed_pitch_frames)
     
-    assert_no_pitch_invention(pitch_frames, smoothed_pitch_frames)
+    print("Raw (unsmoothed) diagnostics")
+    run_diagnostics(pitch_frames)
 
-    summarize_smoothing_adjustments(pitch_frames, smoothed_pitch_frames)
+    print("Post-refinement diagnostics")
+    run_diagnostics(smoothed_pitch_frames)
+
 
 if __name__ == "__main__":
     main()

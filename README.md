@@ -3,11 +3,18 @@
 
 # Python Time
 
-**My main goal of this project is to first build some infrastructure, for music/audio analysis, which I will then throw ML and other stuff on top of. To start, we are building the framing and pitch identification.**
+> **New here?** See [`SUMMARY.md`](SUMMARY.md) for a concise overview of the project’s goals, architecture, and design philosophy.
+
+
+**My main goal of this project is to first build some infrastructure, for music/audio analysis, which will later support machine learning and higher-level analysis layers. To start, we are building the framing and pitch identification.**
 
 **Currently, main.py runs some tests/checks of the stuff I've built so far. Once I get a little more fleshed out, I'll write a .md file that explains how to run everything.**
 
 #### I've had chatGPT write most of the docstrings for functions and classes after the fact. None of the other code, unless explicitly referenced, is AI generated.
+
+## This is Stage 0 Of the Project
+
+This project emphasizes deterministic signal processing, explicit uncertainty, and empirical characterization before introducing machine learning.
 
 ### Needed info:
 
@@ -21,8 +28,6 @@ Then:
 
 #### TO close....
 `deactivate`
-
-## This is Stage 0 Of the Project
 
 
 We'll load the audio from the disk, convert to a standardized internal representation.
@@ -75,7 +80,7 @@ So, our best solution for this, for bass, is larger frames **_(80-120ms)_**, wit
 
 
 
-## AudioBuffer (`AudioBuffer`)
+# AudioBuffer (`AudioBuffer`)
 
 An `AudioBuffer` is a validated, mono, float32 audio signal with exact sample-to-time semantics, serving as the immutable source of truth for all downstream analysis.
 
@@ -275,7 +280,7 @@ sample_rate : optional
 
 ------
 
-## PitchFrame (`PitchFrame`)
+# PitchFrame (`PitchFrame`)
 
 A `PitchFrame` is a per-frame, time-aligned hypothesis of fundamental frequency with explicit confidence, designed to be honest, estimator-agnostic, and suitable for downstream temporal reasoning.
 
@@ -390,6 +395,101 @@ This function **NEVER** looks at neighboring frames.
 
 
 
+# Temporal Pitch Refinement (`smoothing.py`)
 
+Pitch estimation in this project is intentionally **frame-local**.  
+No temporal assumptions are made at the estimation stage.
+
+An optional refinement layer exists that operates **strictly downstream of `PitchFrame` sequences**. Its purpose is to explore conservative, confidence-aware temporal reasoning *without modifying the estimator itself*.
+
+## Design Principles
+
+This layer:
+
+- Consumes an ordered list of `PitchFrame` objects
+- Produces a **new list of `PitchFrame` objects**
+- Never mutates existing frames
+- Never invents pitch where none was estimated
+- Preserves abstention (`f0_hz = None`) as a first-class outcome
+- Is explicitly allowed to make **no changes**
+
+Temporal refinement is treated as a *pure transformation*, not a correction.
+
+## Scope
+
+Current refinement logic may:
+- Suppress isolated low-confidence flicker
+- Reinforce locally consistent pitch hypotheses
+- Respect estimator confidence thresholds
+
+It does **not**:
+- Enforce continuity
+- Apply musical priors
+- Correct octave errors
+- Optimize pitch accuracy
+
+The goal is to explore *what temporal context can reveal*, not to hide estimator failures.
+
+# Diagnostic & Characterization Metrics
+
+In addition to pitch estimation, the project includes a **pure diagnostic layer** designed to characterize estimator behavior over time.
+
+This layer operates strictly on sequences of `PitchFrame` objects (raw or smoothed) and is intentionally **non-corrective**.
+
+## Philosophy
+
+The purpose of diagnostics is **not** to improve pitch estimates.
+
+Instead, these metrics aim to answer questions such as:
+- When does the estimator speak vs abstain?
+- Are failures isolated or regime-based?
+- How stable is pitch when voiced?
+- When does estimator confidence align with stability — and when does it not?
+
+No ground truth is assumed.  
+No musical structure is imposed.
+
+## Scope & Constraints
+
+This layer:
+
+- Does not modify core abstractions
+- Does not smooth or reinterpret pitch
+- Does not introduce machine learning
+- Treats `f0_hz = None` as signal, not noise
+- Is deterministic and side-effect free
+
+All analysis is based solely on:
+- frame indices
+- presence or absence of pitch
+- frame-to-frame pitch deltas (when voiced)
+- estimator-reported confidence
+
+## Implemented Diagnostic Axes
+
+**Voicing Diagnostics**
+- Voiced ratio
+- Failure clustering (distinguishing flicker vs contiguous failure regimes)
+
+**Pitch Stability Diagnostics**
+- Frame-to-frame pitch volatility
+- Continuity of voiced segments
+
+**Confidence Diagnostics**
+- Confidence behavior across voiced and unvoiced frames
+- Relationship between confidence and short-term pitch stability
+- Identifying cases where confidence no longer reflects stability
+
+## Interpretation
+
+These metrics are descriptive, not evaluative.
+
+They are designed to surface:
+- non-obvious estimator behavior
+- regime-dependent reliability
+- limits of confidence as a stability signal
+- cases where high confidence does not imply stable pitch
+
+This layer exists to make estimator behavior **inspectable**, not to make it look better.
 
 
